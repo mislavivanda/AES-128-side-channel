@@ -88,6 +88,6 @@ for i in range(16):
                 maximumValue = pearsonCorrelationCoefficientValues[i][j][k]
                 maximumValueByteValue = k
     print("Byte " + str(i+1) + ':' + str(maximumValueByteValue))
-    print('Pearson value: ' + maximumValue)
+    print('Pearson value: ' + str(maximumValue))
     firstRoundKey += hex(maximumValueByteValue)
 print('Guessed first round key: ' + firstRoundKey)
