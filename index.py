@@ -40,15 +40,25 @@ AES_key = [0x30, 0x30, 0x30, 0x30, 0x37, 0x30, 0x31,
 plaintext = [0x30, 0x30, 0x30, 0x30, 0x37, 0x30, 0x31,
              0x35, 0x30, 0x30, 0x30, 0x30, 0x37, 0x30, 0x31, 0x35]
 cypher = aes.enc(AES_key, plaintext)
-for i in range(len(cypher)):
-    print(hex(cypher[i]))
-for sampleIndex in range(sampleCount):
+aes.aes128InverseKeyExpansion([0x89, 0xd8, 0xf2, 0x59, 0xd0, 0x92,
+                              0x47, 0x0f, 0xe1, 0x56, 0x69, 0xfc, 0x83, 0x64, 0x05, 0x23])
+print(cypher)
+""" for sampleIndex in range(sampleCount):
     recordedTracesHWValues[sampleIndex] = []
+    # NAPADAMO ZADNJU OPERACIJU U ZADNJOJ RUNDI AES-A JE XORANJE BAJTOVA SA LAST ROUND KEY
+    # IZLAZ TOGA JE ZAPRAVO KRAJNJI REZULTAT AES-A ODNOSNO CIPHERTEXT
+    # MI TREBAMO DOBIT VRIJEDNOSTI BAJTOVA KOJE SE XOR-aju SA LAST ROUND KEY
+    # TO DOBIJEMO SAMO TAKO DA XORAMO NAZAD SA KEY BAJTOM
+    # PRISTUP SE MOZE TEMELJIT NA TOME DA ZNAMO CIPHERTEXT(SNIFFAMO PROMET PA GA ZNAMO) I ZNAMO PLAINTEXT(NEN UZNO DA MI SALJEMO NEGO NPR SENZOR ZA TEMEPRATURU ZNAMO KOLIKA JE TEMEPRATURA)
+    # KAKO ZNAMO PAROVE PLAINTEXT I CIPHERTEXT ONDA MOZEMO RECOVERAT ISTO KLJUC TAGO DA TARGETAMO ZADNJU OPERACIJU U ZADNJOJ RUNDI
+    # PROBAJ TO AKO NE USPIJE SIDE CHANNELO SA PRVOM RUNDOM
+    # ONDA NAM JE POTREBAN KEY EXPANSION ALGORITAM ZA DOBIT PRAVE KLJUCEVE
+    # ZASAD TARGETAT PRVU RUNDU IAKO NEMA DOVOLJNO ENTROPIJE U PLAINTEXTU, MINJA SE SAMO FRAME COUNT
     for byteIndex in range(16):
         recordedTracesHWValues[sampleIndex].append([])
         for byteValue in range(256):
             recordedTracesHWValues[sampleIndex][byteIndex].append(
-                HW(aes.lookup(payloadTexts[sampleIndex][byteIndex] ^ byteValue)))
+                HW(aes.aesSubBytes(payloadTexts[sampleIndex][byteIndex] ^ byteValue)))
 # Izracunaj perasonove koeficijente korelacije izmedu snimljenih EM signala i izracunatih HW vrijednosti ZA SVAKI SNIMLJENI EM UZORAK
 # Koeficijente racunamo za svaki EM uzorak i grupiramo po BAJTU
 # Za svaki bajt imat ćemo EMLeakageCount(jer racunamo za svaki EM leakage korelaciju sa HW kandidatom) Pearson koeficijenata
@@ -97,4 +107,4 @@ for i in range(16):
     print("Byte " + str(i+1) + ':' + str(maximumValueByteValue))
     print('Pearson value: ' + str(maximumValue))
     firstRoundKey += hex(maximumValueByteValue)
-print('Guessed first round key: ' + firstRoundKey)
+print('Guessed first round key: ' + firstRoundKey) """

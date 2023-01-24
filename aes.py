@@ -53,14 +53,15 @@ def lookup(byte):
     return aes_sbox[x][y]
 
 
+tenRoundsConstants = [[1, 0, 0, 0]]
+
+for _ in range(1, 14):
+    tenRoundsConstants.append([tenRoundsConstants[-1][0]*2, 0, 0, 0])
+    if tenRoundsConstants[-1][0] > 0x80:
+        tenRoundsConstants[-1][0] ^= 0x11b
+
+
 def expand_key(key, rounds):
-
-    rcon = [[1, 0, 0, 0]]
-
-    for _ in range(1, rounds):
-        rcon.append([rcon[-1][0]*2, 0, 0, 0])
-        if rcon[-1][0] > 0x80:
-            rcon[-1][0] ^= 0x11b
 
     key_grid = break_in_grids_of_16(key)[0]
 
@@ -69,7 +70,7 @@ def expand_key(key, rounds):
         last_column_rotate_step = rotate_row_left(last_column)
         last_column_sbox_step = [lookup(b) for b in last_column_rotate_step]
         last_column_rcon_step = [last_column_sbox_step[i]
-                                 ^ rcon[round][i] for i in range(len(last_column_rotate_step))]
+                                 ^ tenRoundsConstants[round][i] for i in range(len(last_column_rotate_step))]
 
         for r in range(4):
             key_grid[r] += bytes([last_column_rcon_step[r]
@@ -194,14 +195,64 @@ def enc(key, data):
             for row in range(4):
                 int_stream.append(grid[row][column])
 
-    return int_stream
+    # convert to hex bytes array
+    return list(map(lambda x: hex(x), int_stream))
 
 
 def extract_key_for_round(expanded_key, round):
     return [row[round*4: round*4 + 4] for row in expanded_key]
 
 
-""" def aesSubBytes(byte):
+def aesSubBytes(byte):
     x = byte >> 4  # x koordinata -> prva 4 MSB bita(MSB nibble)
     y = byte & 15  # y koordinata -> zadnja 4 bita -> zasto 15? -> 15 = 00001111, kad se & s njim sluzi kao maksa i dobijemo zadnja 4 bita odnosno zadnji nibble
-    return aes_sbox[x][y] """
+    return aes_sbox[x][y]
+
+# funkcija za dobit AES-128 glavni kljuc iz kljuca zadnje runde
+# svaka rund -> koristi ključ dužine 16 bajta
+# key expansion algoritam radi dijelove ključeva od 4 bajta
+# svaka runda -> 4 dijela
+# ukupno je potrebno napravit 44 dijela i to po principu:
+# 1) ZA PRVU RUNDU SE SAMO KOPIRA TAJNI KLJUČ
+# 2) ZA DRUGU RUNDU SE RADE 4 DIJELA I TO PO PRINCIPU:
+# SVAKI DIO NA INDEKSU i OVISI O PRETHODNIKU(i-1) I DIJELU i-4(ZA AES-128)
+# DOBIJA SE TAKO DA SE JEDNOSTAVNO XOR-aju TA 2 O KOJIMA OVISI
+# https://crypto.stackexchange.com/questions/20/what-are-the-practical-differences-between-256-bit-192-bit-and-128-bit-aes-enc/1527#1527
+# OVO JE MOGUCE SAMO ZA AES-128, ZA OSTALE TRIBA ZNAT VIŠE OD KLJUCA ZADNJE RUNDE
+# IMAMO ZADNJU RUNDU ->  k43,k42,k41,k40
+# DIJELOVE KLJUCA PRETHODNE RUNDE DOBIVAMO KAO:
+# k43 = k42 XOR k39 -> k39 = k43 XOR k42
+# k42 = k41 XOR k38 -> k38 = k42 XOR k41
+# k41 = k40 XOR k37 -> k37 = k41 XOR k40
+# k40 = F(k39) XOR k36 -> k36 = k40 XOR F(k39)
+
+
+def aes128InverseKeyExpansion(lastRoundKeyBytes):
+    expandedKeys = [None] * 44
+    expandedKeys[40] = lastRoundKeyBytes[0:4]
+    expandedKeys[41] = lastRoundKeyBytes[4:8]
+    expandedKeys[42] = lastRoundKeyBytes[8: 12]
+    expandedKeys[43] = lastRoundKeyBytes[12: 16]
+    lastRoundKey = ''
+    # ROTIRAJ DI TREBA NA SLICI
+    for i in range(39, -1, -1):
+        expandedKeys[i] = []
+        temp = expandedKeys[i+3]
+        if (i % 4 == 0):
+            # PRIMJENI METODU NA i+3 INDEKS
+            temp = rotate_row_left(expandedKeys[i+3])
+            # Supstituiraj svaki bajt
+            for j in range(len(temp)):
+                temp[j] = lookup(temp[j])
+            # XORAJ PRVI BAJT SA KONSTANTOM
+            temp[0] = temp[0] ^ tenRoundsConstants[int(i/4)][0]
+        for a, b in zip(expandedKeys[i+4], temp):
+            expandedKeys[i].append(a ^ b)
+    for i in range(36, 40):
+        for j in range(4):
+            lastRoundKey += hex(expandedKeys[i][j])
+    aesKey = ''
+    for i in range(4):
+        for j in range(len(expandedKeys[i])):
+            aesKey += hex(expandedKeys[i][j])
+    return aesKey
