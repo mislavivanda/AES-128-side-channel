@@ -1,5 +1,5 @@
 import csv
-from aes_subbytes import aesSubBytes
+import aes
 from hamming_weight import HW
 from pearson import pearsonCorrelationCoefficent
 # Zbog jednostavnosti uzet uvijek isti plaintext
@@ -35,13 +35,20 @@ for sampleIndex in range(sampleCount):
 # Na ovaj način ćemo otkrivat svaki bajt od ključa runde posebno a oni ce svi zajedno cinit cijeli ključ runde
 # Buduci da mi ne znamo kljuc pa tako ni njegove bajtove racunamo HW za svaku mogucnost(BRUTEFORCE) -> buduci da se radi o bajtu to je [0-255]
 recordedTracesHWValues = [None] * sampleCount
+AES_key = [0x30, 0x30, 0x30, 0x30, 0x37, 0x30, 0x31,
+           0x35, 0x30, 0x30, 0x30, 0x30, 0x37, 0x30, 0x31, 0x35]
+plaintext = [0x30, 0x30, 0x30, 0x30, 0x37, 0x30, 0x31,
+             0x35, 0x30, 0x30, 0x30, 0x30, 0x37, 0x30, 0x31, 0x35]
+cypher = aes.enc(AES_key, plaintext)
+for i in range(len(cypher)):
+    print(hex(cypher[i]))
 for sampleIndex in range(sampleCount):
     recordedTracesHWValues[sampleIndex] = []
     for byteIndex in range(16):
         recordedTracesHWValues[sampleIndex].append([])
         for byteValue in range(256):
             recordedTracesHWValues[sampleIndex][byteIndex].append(
-                HW(aesSubBytes(payloadTexts[sampleIndex][byteIndex] ^ byteValue)))
+                HW(aes.lookup(payloadTexts[sampleIndex][byteIndex] ^ byteValue)))
 # Izracunaj perasonove koeficijente korelacije izmedu snimljenih EM signala i izracunatih HW vrijednosti ZA SVAKI SNIMLJENI EM UZORAK
 # Koeficijente racunamo za svaki EM uzorak i grupiramo po BAJTU
 # Za svaki bajt imat ćemo EMLeakageCount(jer racunamo za svaki EM leakage korelaciju sa HW kandidatom) Pearson koeficijenata
