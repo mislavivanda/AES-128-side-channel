@@ -145,9 +145,9 @@ leakageModel = firstRoundLeakageModel
 if not useFirstRoundLeakageModel:
     leakageModel = lastRoundLeakageModel
 
-sampleCount = 2  # broj snimanja
+sampleCount = 30  # broj snimanja
 # broj uzoraka koji odgovaraju AES-u -> MORA BITI FIKSAN ODNOSNO ISTI ZA SVAKO SNIMANJE
-EMLeakageCount = 4000
+EMLeakageCount = 2480
 # Za svaki snimljeni trace pohrani sve snimljene uzorke koji predstavlja EM leakage
 # U teoriji svaki snimljeni trace moze odgovarat razlicitom plaintextu
 recordedTracesEMLeakages = [None] * sampleCount
@@ -198,8 +198,6 @@ for i in range(16):
     pearsonCorrelationCoefficientValues[i] = []
     for j in range(EMLeakageCount):
         pearsonCorrelationCoefficientValues[i].append([])
-        for k in range(EMLeakageCount):
-            pearsonCorrelationCoefficientValues[i][j] = []
 # print(pearsonCorrelationCoefficientValues[0])
 pearsonX = [None] * sampleCount  # snimljeni EM uzorci
 pearsonY = [None] * sampleCount  # izracunati HW
@@ -223,7 +221,7 @@ for i in range(EMLeakageCount):
 # TO ZAPRAVO ODGOVARA PRETRAZIVANJU MATRICE EMLeakageCount * 256
 maximumValueByteValue = None
 maximumValue = None
-targetRoundKey = [] * 16
+targetRoundKey = [None] * 16
 for i in range(16):
     # Postavi max na prvi clan
     maximumValue = pearsonCorrelationCoefficientValues[i][0][0]
@@ -242,6 +240,11 @@ if useFirstRoundLeakageModel:
 else:
     printInfoString = 'LAST'
 printInfoString += ' round key: '
-print(printInfoString + targetRoundKey)
-mainKey = aes.aes128InverseKeyExpansion(targetRoundKey)
+targetRoundKeyString = ' '.join(str(e) for e in targetRoundKey)
+print(printInfoString + targetRoundKeyString)
+mainKey = ''
+if useFirstRoundLeakageModel:
+    mainKey = targetRoundKeyString
+else:
+    mainKey = aes.aes128InverseKeyExpansion(targetRoundKey)
 print('Main key ' + mainKey)
